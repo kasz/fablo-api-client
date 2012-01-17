@@ -52,6 +52,7 @@
         key-id (params "AWSAccessKeyId")
         signature (params "Signature")]
     (assert key)
+    #_(swank.core/break)
     (cond
      (not (and version method key-id signature))
      [false "Missing SignatureVersion, SignatureMethod, AWSAccessKeyId or Signature"]
@@ -68,7 +69,7 @@
      true
      [true "Signature verification succesful"])))
 
-(defn wrap-sign-request [client]
+#_(defn wrap-sign-request [client]
   (fn [req]
     (if-let [[key-id key] (:amazon-aws-auth req)]
       (let [headers (merge {"SignatureVersion" "2"
@@ -77,4 +78,19 @@
                            (:headers req))
             signature (hmac-sha256 (string-to-sign (assoc req :headers headers)) key)]
         (client (assoc (dissoc req :amazon-aws-auth) :headers (assoc headers "Signature" signature))))
+      (client req))))
+
+(defn wrap-sign-request [client]
+  (fn [req]
+    (if-let [[key-id key] (:amazon-aws-auth req)]
+      (let [headers (merge {"SignatureVersion" "2"
+                            "SignatureMethod" "HmacSHA256"
+                            "AWSAccessKeyId" key-id}
+                           (:headers req))
+            signature (hmac-sha256 (string-to-sign (assoc req :headers headers)) key)
+            params (assoc headers "Signature" signature)]
+        (do (println (check-signature (assoc (dissoc req :amazon-aws-auth) :params params) key))
+            #_(swank.core/break)
+            (client (assoc (dissoc req :amazon-aws-auth) :headers params))))
+            ;; (client (assoc req :headers params))))
       (client req))))
