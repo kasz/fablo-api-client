@@ -13,42 +13,43 @@
 ;;; Our api-request is an http request wrapped in signature processing
 (def api-request (auth/wrap-sign-request #'http/request))
 
-;;; orignal
-(comment (defmacro def-api-fn [name url-template & {:keys [request-method required-args optional-args url-template-args signature-required]}]
-           (let [url-parameters (set url-template-args)]
-             `(defn ~name [~@required-args & {:keys ~(vec (conj optional-args 'api-server 'api-customer 'api-auth-info))}]
-                (let [request-map# (merge
-                                    {:url (str "http://"
-                                               (string/join "/"
-                                                            [(or ~'api-server ~'*api-server*) "api/2" (or ~'api-customer ~'*api-customer*)
-                                                             (format ~url-template ~@url-template-args)]))
-                                     :method ~(or request-method :get)
-                                     :query-params (merge ~(into {} (map #(vector (str %) %) (remove url-parameters required-args)))
-                                                          ~@(map (fn [x] `(if ~x {~(str x) (if (string? ~x) ~x (json/generate-string ~x))} {}))
-                                                                 optional-args))}
-                                    ~(when signature-required
-                                       `(when-let [auth-info# (or ~'api-auth-info ~'*api-auth-info*)]
-                                          {:amazon-aws-auth [(or (:key-id auth-info#) "default") (:key auth-info#)]})))
-                      response# (api-request request-map#)
-                      result# (:status response#)]
-                  (when (and (>= result# 200) (< result# 300))
-                    (json/parse-string (:body response#))))))))
+;;; original
+(comment(defmacro def-api-fn [name url-template & {:keys [request-method required-args optional-args url-template-args signature-required]}]
+   (let [url-parameters (set url-template-args)]
+     `(defn ~name [~@required-args & {:keys ~(vec (conj optional-args 'api-server 'api-customer 'api-auth-info))}]
+        (let [request-map# (merge
+                            {:url (str "http://"
+                                       (string/join "/"
+                                                    [(or ~'api-server ~'*api-server*) "api/2" (or ~'api-customer ~'*api-customer*)
+                                                     (format ~url-template ~@url-template-args)]))
+                             :method ~(or request-method :get)
+                             :query-params (merge ~(into {} (map #(vector (str %) %) (remove url-parameters required-args)))
+                                                  ~@(map (fn [x] `(if ~x {~(str x) (if (string? ~x) ~x (json/generate-string ~x))} {}))
+                                                         optional-args))}
+                            ~(when signature-required
+                               `(when-let [auth-info# (or ~'api-auth-info ~'*api-auth-info*)]
+                                  {:amazon-aws-auth [(or (:key-id auth-info#) "default") (:key auth-info#)]})))
+              response# (api-request request-map#)
+              result# (:status response#)]
+          (when (and (>= result# 200) (< result# 300))
+            (json/parse-string (:body response#))))))))
 
 (defmacro def-api-fn [name url-template & {:keys [request-method required-args optional-args url-template-args signature-required]}]
-  (let [url-parameters (set url-template-args)]
+  (let [url-parameters (set url-template-args)
+        uri (gensym "uri-")]
     `(defn ~name [~@required-args & {:keys ~(vec (conj optional-args 'api-server 'api-customer 'api-auth-info))}]
-       (let [request-map# (merge
-                           {:url (str "http://"
-                                      (string/join "/"
-                                                   [(or ~'api-server ~'*api-server*) "api/2" (or ~'api-customer ~'*api-customer*)
-                                                    (format ~url-template ~@url-template-args)]))
+       (let [~uri (string/join "/" ["/api/2" (or ~'api-customer ~'*api-customer*) (format ~url-template ~@url-template-args)]) ; TODO: extract or
+             request-map# (merge
+                           {:url (str "http://" (or ~'api-server ~'*api-server*) ~uri)
                             :method ~(or request-method :get)
                             :query-params (merge ~(into {} (map #(vector (str %) %) (remove url-parameters required-args)))
                                                  ~@(map (fn [x] `(if ~x {~(str x) (if (string? ~x) ~x (json/generate-string ~x))} {}))
-                                                        optional-args))}
+                                                        optional-args))
+                            :headers {"host" (or ~'api-server ~'*api-server*)}}
                            ~(when signature-required
                               `(when-let [auth-info# (or ~'api-auth-info ~'*api-auth-info*)]
-                                 {:amazon-aws-auth [(or (:key-id auth-info#) "default") (:key auth-info#)]})))
+                                 {:amazon-aws-auth [(or (:key-id auth-info#) "default") (:key auth-info#)]
+                                  :uri ~uri})))
              ;; response# (api-request request-map#)
              ;; response# {:status 200, :body "{}" }
              response# (do #_(swank.core/break) (api-request request-map#))
