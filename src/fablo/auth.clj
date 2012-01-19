@@ -33,7 +33,12 @@
   (let [names-and-values (remove #(= (first %) "Signature") (:params req))
         sorted-nv-pairs (sort-by first names-and-values)
         canonicalized-pairs (map (fn [[k v]] (str k "=" (url-encode-with-aws-semantics v))) sorted-nv-pairs)]
-    #_(swank.core/break)
+    (string/join "&" canonicalized-pairs)))
+
+(defn canonicalize-query-string-with-signature [req]
+  (let [names-and-values (:params req)
+        sorted-nv-pairs (sort-by first names-and-values)
+        canonicalized-pairs (map (fn [[k v]] (str k "=" (url-encode-with-aws-semantics v))) sorted-nv-pairs)]
     (string/join "&" canonicalized-pairs)))
 
 (defn string-to-sign [req]
@@ -72,6 +77,7 @@
      true
      [true "Signature verification succesful"])))
 
+;;; original version
 #_(defn wrap-sign-request [client]
   (fn [req]
     (if-let [[key-id key] (:amazon-aws-auth req)]
@@ -83,6 +89,28 @@
         (client (assoc (dissoc req :amazon-aws-auth) :headers (assoc headers "Signature" signature))))
       (client req))))
 
+;;; headers version
+#_(defn wrap-sign-request [client]
+  (fn [req]
+    (if-let [[key-id key] (:amazon-aws-auth req)]
+      (let [headers (merge {"SignatureVersion" "2"
+                            "SignatureMethod" "HmacSHA256"
+                            "AWSAccessKeyId" key-id}
+                           (:headers req))
+            signed-string (string-to-sign (assoc req :headers headers :params (dissoc headers "host")))
+            signature (hmac-sha256 signed-string key)
+            params (dissoc (assoc headers "Signature" (url-encode-with-aws-semantics signature)) "host")]
+        (do #_(println (url-encode-with-aws-semantics signature))
+            #_(println signed-string)
+            #_(swank.core/break)
+            (client (assoc (dissoc req :amazon-aws-auth :uri)
+                      :headers (assoc headers "Signature" signature)
+                      ;; :throw-exceptions false
+                      ))))
+            ;; (client (assoc req :headers params))))
+      (client req))))
+
+;;; query string version (this code my look bad, owning to changed idea about passing authentication parameters)
 (defn wrap-sign-request [client]
   (fn [req]
     (if-let [[key-id key] (:amazon-aws-auth req)]
@@ -92,12 +120,15 @@
                            (:headers req))
             signed-string (string-to-sign (assoc req :headers headers :params (dissoc headers "host")))
             signature (hmac-sha256 signed-string key)
-            params (dissoc (assoc headers "Signature" signature))]
-        (do #_(println (check-signature (assoc (dissoc req :amazon-aws-auth) :params params) key))
-            (println (url-encode-with-aws-semantics signature))
-            (println signed-string)
-            (swank.core/break)
+            params (dissoc (assoc headers "Signature" (url-encode-with-aws-semantics signature)) "host")]
+        (do #_(swank.core/break)
             (client (assoc (dissoc req :amazon-aws-auth :uri)
-                      :headers (dissoc (assoc headers "Signature" (url-encode-with-aws-semantics signature)) "host")))))
+                       :throw-exceptions false
+                       :query-params (merge (:query-params req) (dissoc (assoc headers "Signature" signature) "host"))))
+            #_(client (assoc (dissoc req :amazon-aws-auth :uri)
+                      ;; :headers (dissoc (assoc headers "Signature" signature) "host")
+                      
+                      :throw-exceptions false
+                      ))))
             ;; (client (assoc req :headers params))))
       (client req))))

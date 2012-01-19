@@ -14,7 +14,7 @@
 (def api-request (auth/wrap-sign-request #'http/request))
 
 ;;; original
-(comment(defmacro def-api-fn [name url-template & {:keys [request-method required-args optional-args url-template-args signature-required]}]
+(comment (defmacro def-api-fn [name url-template & {:keys [request-method required-args optional-args url-template-args signature-required]}]
    (let [url-parameters (set url-template-args)]
      `(defn ~name [~@required-args & {:keys ~(vec (conj optional-args 'api-server 'api-customer 'api-auth-info))}]
         (let [request-map# (merge
@@ -38,7 +38,7 @@
   (let [url-parameters (set url-template-args)
         uri (gensym "uri-")]
     `(defn ~name [~@required-args & {:keys ~(vec (conj optional-args 'api-server 'api-customer 'api-auth-info))}]
-       (let [~uri (string/join "/" ["/api/2" (or ~'api-customer ~'*api-customer*) (format ~url-template ~@url-template-args)]) ; TODO: extract or
+       (let [~uri (string/join "/" ["/api/2" (or ~'api-customer ~'*api-customer*) (format ~url-template ~@url-template-args)]) ; TODO: extract "or"
              request-map# (merge
                            {:url (str "http://" (or ~'api-server ~'*api-server*) ~uri)
                             :method ~(or request-method :get)
