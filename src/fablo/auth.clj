@@ -35,12 +35,6 @@
         canonicalized-pairs (map (fn [[k v]] (str k "=" (url-encode-with-aws-semantics v))) sorted-nv-pairs)]
     (string/join "&" canonicalized-pairs)))
 
-(defn canonicalize-query-string-with-signature [req]
-  (let [names-and-values (:params req)
-        sorted-nv-pairs (sort-by first names-and-values)
-        canonicalized-pairs (map (fn [[k v]] (str k "=" (url-encode-with-aws-semantics v))) sorted-nv-pairs)]
-    (string/join "&" canonicalized-pairs)))
-
 (defn string-to-sign [req]
   (string/join
    "\n"
@@ -71,13 +65,13 @@
 
      (not= signature (hmac method (string-to-sign req) key))
      (do
-      (println (string-to-sign req))
+      (println (string-to-sign req)) ; TODO: change to previous version when done
       [false (pr-str "Signature verification failed, got " signature " ; should be:" (hmac method (string-to-sign req) key))])
 
      true
      [true "Signature verification succesful"])))
 
-;;; original version
+;;; original version TODO: remove when done
 #_(defn wrap-sign-request [client]
   (fn [req]
     (if-let [[key-id key] (:amazon-aws-auth req)]
@@ -89,46 +83,19 @@
         (client (assoc (dissoc req :amazon-aws-auth) :headers (assoc headers "Signature" signature))))
       (client req))))
 
-;;; headers version
-#_(defn wrap-sign-request [client]
-  (fn [req]
-    (if-let [[key-id key] (:amazon-aws-auth req)]
-      (let [headers (merge {"SignatureVersion" "2"
-                            "SignatureMethod" "HmacSHA256"
-                            "AWSAccessKeyId" key-id}
-                           (:headers req))
-            signed-string (string-to-sign (assoc req :headers headers :params (dissoc headers "host")))
-            signature (hmac-sha256 signed-string key)
-            params (dissoc (assoc headers "Signature" (url-encode-with-aws-semantics signature)) "host")]
-        (do #_(println (url-encode-with-aws-semantics signature))
-            #_(println signed-string)
-            #_(swank.core/break)
-            (client (assoc (dissoc req :amazon-aws-auth :uri)
-                      :headers (assoc headers "Signature" signature)
-                      ;; :throw-exceptions false
-                      ))))
-            ;; (client (assoc req :headers params))))
-      (client req))))
-
 ;;; query string version (this code my look bad, owning to changed idea about passing authentication parameters)
-(defn wrap-sign-request [client]
+(defn wrap-sign-request
+  "Closure returning function, responsible for proper requests to Fablo, including authentication."
+  [client]
   (fn [req]
     (if-let [[key-id key] (:amazon-aws-auth req)]
       (let [headers (merge {"SignatureVersion" "2"
                             "SignatureMethod" "HmacSHA256"
                             "AWSAccessKeyId" key-id}
                            (:headers req))
-            signed-string (string-to-sign (assoc req :headers headers :params (dissoc headers "host")))
-            signature (hmac-sha256 signed-string key)
-            params (dissoc (assoc headers "Signature" (url-encode-with-aws-semantics signature)) "host")]
-        (do #_(swank.core/break)
-            (client (assoc (dissoc req :amazon-aws-auth :uri)
-                       :throw-exceptions false
-                       :query-params (merge (:query-params req) (dissoc (assoc headers "Signature" signature) "host"))))
-            #_(client (assoc (dissoc req :amazon-aws-auth :uri)
-                      ;; :headers (dissoc (assoc headers "Signature" signature) "host")
-                      
-                      :throw-exceptions false
-                      ))))
-            ;; (client (assoc req :headers params))))
+            signed-string (string-to-sign (assoc req :headers headers :params (dissoc headers "host"))) ; string-to-sign takes parameters in strange way
+            signature (hmac-sha256 signed-string key)]
+        (client (assoc (dissoc req :amazon-aws-auth :uri) ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
+                  :query-params (merge (:query-params req)
+                                       (dissoc (assoc headers "Signature" signature) "host"))))) ; adding authentication parameters
       (client req))))
