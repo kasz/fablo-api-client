@@ -94,10 +94,11 @@
                             "SignatureMethod" "HmacSHA256"
                             "AWSAccessKeyId" key-id}
                            (:headers req))
-            signed-string (string-to-sign (assoc req :headers headers :params (dissoc headers "host"))) ; string-to-sign takes parameters in strange way
+            signed-string (string-to-sign (assoc req :headers headers ; string-to-sign takes parameters in strange way
+                                                 :params (merge (dissoc headers "host") (:query-params req))))
             signature (hmac-sha256 signed-string key)
             query-params (merge (:query-params req) (dissoc (assoc headers "Signature" signature) "host"))
-            ;; req-to-send ()
+            ;; cleaned-req ()
             ]
         (cond
          (= (:method req) :post)

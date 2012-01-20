@@ -8,7 +8,6 @@
 (def ^:dynamic *api-server* "localhost:8080")
 (def ^:dynamic *api-customer* "dev")
 (def ^:dynamic *api-auth-info* {:key-id "default" :key "example-api-key"})
-                                        ; if I understand correctly: key-id is same as "keyname", and :key is most probably "secret"
 
 ;;; Our api-request is an http request wrapped in signature processing
 (def api-request (auth/wrap-sign-request #'http/request))
@@ -52,8 +51,7 @@
                                   :uri ~uri})))
              response# (do #_(swank.core/break) (api-request request-map#))
              result# (:status response#)] ; unecessary
-         response#)))) ; returning only body of response might be wrong strategy here
-
+         (select-keys response# [:status :body]))))) ; returning only body of response might be wrong strategy here, maybe pass in some code handling specific cases?
 ;;; functions querying product base
 (def-api-fn products-query "products/query" :optional-args [search-string start results category prefilter attributes return])
 (def-api-fn product "products/id/%s" :required-args [id] :optional-args [return] :url-template-args [id])
