@@ -1,6 +1,7 @@
 (ns fablo.auth
   (:require [clojure.string :as string]
-            [ring.util.codec :as codec])
+            [ring.util.codec :as codec]
+            [clj-http.client :as http])
   (:import [javax.crypto Mac]
            [javax.crypto.spec SecretKeySpec]))
 
@@ -94,8 +95,19 @@
                             "AWSAccessKeyId" key-id}
                            (:headers req))
             signed-string (string-to-sign (assoc req :headers headers :params (dissoc headers "host"))) ; string-to-sign takes parameters in strange way
-            signature (hmac-sha256 signed-string key)]
-        (client (assoc (dissoc req :amazon-aws-auth :uri) ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
-                  :query-params (merge (:query-params req)
-                                       (dissoc (assoc headers "Signature" signature) "host"))))) ; adding authentication parameters
+            signature (hmac-sha256 signed-string key)
+            query-params (merge (:query-params req) (dissoc (assoc headers "Signature" signature) "host"))
+            ;; req-to-send ()
+            ]
+        (cond
+         (= (:method req) :post)
+         (do #_(swank.core/break)
+             (client (assoc (dissoc req :amazon-aws-auth :uri) ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
+                       :body (http/generate-query-string query-params)
+                       :content-type "application/x-www-form-urlencoded"
+                       :throw-exceptions false)))
+
+         true                           ; default handling is get
+         (client (assoc (dissoc req :amazon-aws-auth :uri) ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
+                   :query-params query-params)))) ; adding authentication parameters
       (client req))))

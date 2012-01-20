@@ -50,12 +50,9 @@
                               `(when-let [auth-info# (or ~'api-auth-info ~'*api-auth-info*)]
                                  {:amazon-aws-auth [(or (:key-id auth-info#) "default") (:key auth-info#)]
                                   :uri ~uri})))
-             ;; response# (api-request request-map#)
-             ;; response# {:status 200, :body "{}" }
              response# (do #_(swank.core/break) (api-request request-map#))
-             result# (:status response#)]
-         (when (and (>= result# 200) (< result# 300)) ; checking result code might be unnecessary
-           (json/parse-string (:body response#)))))))
+             result# (:status response#)] ; unecessary
+         response#)))) ; returning only body of response might be wrong strategy here
 
 ;;; functions querying product base
 (def-api-fn products-query "products/query" :optional-args [search-string start results category prefilter attributes return])
