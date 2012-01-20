@@ -53,7 +53,6 @@
         key-id (params "AWSAccessKeyId")
         signature (params "Signature")]
     (assert key)
-    #_(swank.core/break)
     (cond
      (not (and version method key-id signature))
      [false "Missing SignatureVersion, SignatureMethod, AWSAccessKeyId or Signature"]
@@ -80,7 +79,7 @@
                             "AWSAccessKeyId" key-id}
                            (:query-params req))
             query-params (assoc params "Signature" (hmac-sha256 (string-to-sign (assoc req :params params)) key))
-            cleaned-req (dissoc req :amazon-aws-auth :uri)] ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
+            cleaned-req (dissoc req :amazon-aws-auth :uri)] ; :amazon-aws-auth :uri are only temporary keys, they should not be send!
         (cond
          (= (:method req) :post)
          (client (assoc cleaned-req :body (http/generate-query-string query-params)
