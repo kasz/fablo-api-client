@@ -37,9 +37,9 @@
   (let [url-parameters (set url-template-args)
         uri (gensym "uri-")]
     `(defn ~name [~@required-args & {:keys ~(vec (conj optional-args 'api-server 'api-customer 'api-auth-info))}]
-       (let [~uri (string/join "/" ["/api/2" (or ~'api-customer ~'*api-customer*) (format ~url-template ~@url-template-args)]) ; TODO: extract "or"
+       (let [~uri (string/join "/" ["/api/2" (or ~'api-customer ~'*api-customer*) (format ~url-template ~@url-template-args)])
              request-map# (merge
-                           {:url (str "http://" (or ~'api-server ~'*api-server*) ~uri)
+                           {:url (str "http://" (or ~'api-server ~'*api-server*) ~uri) ; TODO: extract "or"
                             :method ~(or request-method :get)
                             :query-params (merge ~(into {} (map #(vector (str %) %) (remove url-parameters required-args)))
                                                  ~@(map (fn [x] `(if ~x {~(str x) (if (string? ~x) ~x (json/generate-string ~x))} {}))
@@ -48,10 +48,9 @@
                            ~(when signature-required
                               `(when-let [auth-info# (or ~'api-auth-info ~'*api-auth-info*)]
                                  {:amazon-aws-auth [(or (:key-id auth-info#) "default") (:key auth-info#)]
-                                  :uri ~uri})))
-             response# (do #_(swank.core/break) (api-request request-map#))
-             result# (:status response#)] ; unecessary
-         (select-keys response# [:status :body]))))) ; returning only body of response might be wrong strategy here, maybe pass in some code handling specific cases?
+                                  :uri ~uri})))]
+         (select-keys (api-request request-map#) [:status :body])))))
+
 ;;; functions querying product base
 (def-api-fn products-query "products/query" :optional-args [search-string start results category prefilter attributes return])
 (def-api-fn product "products/id/%s" :required-args [id] :optional-args [return] :url-template-args [id])
@@ -70,11 +69,10 @@
 (def-api-fn special-offers-random "special-offers/random" :optional-args [number])
 
 ;;; functions modifying product base
-;;; TODO: create function (or macro) to add signature in following functions
-;;; and maybe modify existing macro to take into account admin path
+
 ;;; GET functions
 (def-api-fn indexing-status "admin/indexing-status" :signature-required true)
-(def-api-fn config "admin/config"  :signature-required true)
+(def-api-fn config "admin/config" :signature-required true)
 
 ;;; POST functions
 (def-api-fn switch-db "admin/switch-db" :request-method :post, :signature-required true)
