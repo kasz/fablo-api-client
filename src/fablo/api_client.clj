@@ -44,7 +44,8 @@
                             :query-params (merge ~(into {} (map #(vector (str %) %) (remove url-parameters required-args)))
                                                  ~@(map (fn [x] `(if ~x {~(str x) (if (string? ~x) ~x (json/generate-string ~x))} {}))
                                                         optional-args))
-                            :headers {"host" (or ~'api-server ~'*api-server*)}}
+                            :headers {"host" (or ~'api-server ~'*api-server*)}
+                            :throw-exceptions false}
                            ~(when signature-required
                               `(when-let [auth-info# (or ~'api-auth-info ~'*api-auth-info*)]
                                  {:amazon-aws-auth [(or (:key-id auth-info#) "default") (:key auth-info#)]

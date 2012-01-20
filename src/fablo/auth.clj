@@ -65,50 +65,27 @@
      [false "Unsupported signature version, only version 2 is supported"]
 
      (not= signature (hmac method (string-to-sign req) key))
-     (do
-      (println (string-to-sign req)) ; TODO: change to previous version when done
-      [false (pr-str "Signature verification failed, got " signature " ; should be:" (hmac method (string-to-sign req) key))])
+     [false (pr-str "Signature verification failed, got " signature " ; should be:" (hmac method (string-to-sign req) key))]
 
      true
      [true "Signature verification succesful"])))
 
-;;; original version TODO: remove when done
-#_(defn wrap-sign-request [client]
-  (fn [req]
-    (if-let [[key-id key] (:amazon-aws-auth req)]
-      (let [headers (merge {"SignatureVersion" "2"
-                            "SignatureMethod" "HmacSHA256"
-                            "AWSAccessKeyId" key-id}
-                           (:headers req))
-            signature (hmac-sha256 (string-to-sign (assoc req :headers headers)) key)]
-        (client (assoc (dissoc req :amazon-aws-auth) :headers (assoc headers "Signature" signature))))
-      (client req))))
-
-;;; query string version (this code my look bad, owning to changed idea about passing authentication parameters)
 (defn wrap-sign-request
-  "Closure returning function, responsible for proper requests to Fablo, including authentication."
+  "Closure returning function, responsible for proper requests to Fablo."
   [client]
   (fn [req]
     (if-let [[key-id key] (:amazon-aws-auth req)]
-      (let [headers (merge {"SignatureVersion" "2"
+      (let [params (merge {"SignatureVersion" "2"
                             "SignatureMethod" "HmacSHA256"
                             "AWSAccessKeyId" key-id}
-                           (:headers req))
-            signed-string (string-to-sign (assoc req :headers headers ; string-to-sign takes parameters in strange way
-                                                 :params (merge (dissoc headers "host") (:query-params req))))
-            signature (hmac-sha256 signed-string key)
-            query-params (merge (:query-params req) (dissoc (assoc headers "Signature" signature) "host"))
-            ;; cleaned-req ()
-            ]
+                           (:query-params req))
+            query-params (assoc params "Signature" (hmac-sha256 (string-to-sign (assoc req :params params)) key))
+            cleaned-req (dissoc req :amazon-aws-auth :uri)] ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
         (cond
          (= (:method req) :post)
-         (do #_(swank.core/break)
-             (client (assoc (dissoc req :amazon-aws-auth :uri) ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
-                       :body (http/generate-query-string query-params)
-                       :content-type "application/x-www-form-urlencoded"
-                       :throw-exceptions false)))
+         (client (assoc cleaned-req :body (http/generate-query-string query-params)
+                   :content-type "application/x-www-form-urlencoded"))
 
          true                           ; default handling is get
-         (client (assoc (dissoc req :amazon-aws-auth :uri) ; :amazon-aws-auth :uri are only temporary keys, they must not be send!
-                   :query-params query-params)))) ; adding authentication parameters
+         (client (assoc cleaned-req :query-params query-params))))
       (client req))))
