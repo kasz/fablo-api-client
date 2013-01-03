@@ -14,7 +14,8 @@
 
 (defmacro def-api-fn [name url-template & {:keys [request-method required-args optional-args url-template-args signature-required]}]
   (let [url-parameters (set url-template-args)
-        uri (gensym "uri-")]
+        uri (gensym "uri-")
+        optional-args (conj optional-args 'callback)]
     `(defn ~name [~@required-args & {:keys ~(vec (conj optional-args 'api-server 'api-customer 'api-auth-info 'throw-exceptions))}]
        (let [~uri (string/join "/" ["/api/2" (or ~'api-customer ~'*api-customer*) (format ~url-template ~@url-template-args)])
              api-server# (or ~'api-server ~'*api-server*)
@@ -34,7 +35,7 @@
          (select-keys (api-request request-map#)
                       [:status :body])))))
 
-(def-api-fn products-query "products/query" :optional-args [search-string start results category prefilter attributes return sort weak-sort])
+(def-api-fn products-query "products/query" :optional-args [search-string start results category prefilter attributes return sort weak-sort user])
 (def-api-fn product "products/id/%s" :required-args [id] :optional-args [return] :url-template-args [id])
 (def-api-fn product-variants-query "products/id/%s/variants/query" :required-args [id] :optional-args [options return] :url-template-args [id])
 (def-api-fn product-categories "products/categories" :optional-args [level])
