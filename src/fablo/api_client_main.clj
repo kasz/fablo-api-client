@@ -7,8 +7,11 @@
 
 (def +fablorc-filename+ ".fablorc")
 
+;; (defn- format-response [r]
+;;   (format "Response status: %d \nResponse body: %s" (:status r) (:body r)))
+
 (defn- format-response [r]
-  (format "Response status: %d \nResponse body: %s" (:status r) (:body r)))
+  (format "{\"status\": %d, \"body\": %s}" (:status r) (:body r)))
 
 (defmacro with-customer-params [params raw & body]
   `(let [parsed-params# ~params]
