@@ -62,6 +62,17 @@
 (def-api-fn config "admin/config" :signature-required true)
 (def-api-fn features "admin/features" :signature-required true)
 
+;;; statistics
+;;; I thought about expanding this functionality to few separte api fns in order to make calling most popular queries easily
+(def-api-fn stats "admin/stats/%s/%s/%s/%s" :signature-required true
+  :required-args [stats-class what period-type period]
+  :url-template-args [stats-class what period-type period]
+  :optional-args [for from to offset limit])
+(def-api-fn stats-ranks-search-string-ranks "admin/stats/ranks/search-strings/%s/last" :signature-required true
+  :required-args [period-type]
+  :url-template-args [period-type]
+  :optional-args [for from to offset limit])
+
 ;;; POST functions
 (def-api-fn config-set "admin/config" :request-method :post, :signature-required true
   :required-args [config])
