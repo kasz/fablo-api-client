@@ -1,4 +1,4 @@
-(defproject fablo/api-client "1.2.4"
+(defproject fablo/api-client "1.2.5"
   :main fablo.api-client-main
   :description "Fablo API client"
   :dependencies [[org.clojure/clojure "1.5.1"]
