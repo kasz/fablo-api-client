@@ -7,9 +7,6 @@
 
 (def +fablorc-filename+ ".fablorc")
 
-;; (defn- format-response [r]
-;;   (format "Response status: %d \nResponse body: %s" (:status r) (:body r)))
-
 (defn- format-response [r]
   (format "{\"status\": %d, \"body\": %s}" (:status r) (:body r)))
 

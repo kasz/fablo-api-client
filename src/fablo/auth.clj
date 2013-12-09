@@ -1,7 +1,9 @@
 (ns fablo.auth
   (:require [clojure.string :as string]
             [ring.util.codec :as codec]
-            [clj-http.client :as http])
+            [clj-http.client :as http]
+            [clj-time.core :as clj-time]
+            [clj-time.format :as time-format])
   (:import [javax.crypto Mac]
            [javax.crypto.spec SecretKeySpec]))
 
@@ -75,8 +77,9 @@
   (fn [req]
     (if-let [[key-id key] (:amazon-aws-auth req)]
       (let [params (merge {"SignatureVersion" "2"
-                            "SignatureMethod" "HmacSHA256"
-                            "AWSAccessKeyId" key-id}
+                           "SignatureMethod" "HmacSHA256"
+                           "AWSAccessKeyId" key-id
+                           "Timestamp" (time-format/unparse (time-format/formatters :date-time) (clj-time/now))}
                            (:query-params req))
             query-params (assoc params "Signature" (hmac-sha256 (string-to-sign (assoc req :params params)) key))
             cleaned-req (dissoc req :amazon-aws-auth :uri :query-params)] ; :amazon-aws-auth :uri are only temporary keys,
