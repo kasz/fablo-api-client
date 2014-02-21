@@ -26,11 +26,13 @@
   In that case ~/.fablorc is not even read.
   If user prefers returning of raw response from server passing -r parameter does just that."
   [& argv]
-  (let [{:keys [params customer] :as opts}
+  (let [{:keys [params customer output] :as opts}
         (clojopts/clojopts "fablo-api-client" argv
                            (clojopts/with-arg params p "Authentication parameters in JSON."
                              :type :str)
                            (clojopts/with-arg customer c "Fablorc customer. Ignored if 'params' paramter provided"
+                             :type :str)
+                           (clojopts/with-arg output o "File to write output to."
                              :type :str)
                            (clojopts/no-arg raw r "Returns raw response."))
         api-fn-params (:clojopts/more opts)
@@ -51,4 +53,6 @@
     (assert api-fn-params "No query provided.")
     (with-customer-params parsed-params return-raw-response
       (let [r (eval api-fn)]
-        (println (if return-raw-response r (format-response r)))))))
+        (if output
+          (spit output (:body r))
+          (if return-raw-response r (format-response r)))))))
