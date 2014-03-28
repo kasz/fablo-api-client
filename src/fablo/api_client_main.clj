@@ -55,4 +55,4 @@
       (let [r (eval api-fn)]
         (if output
           (spit output (:body r))
-          (if return-raw-response r (format-response r)))))))
+          (println (if return-raw-response r (format-response r))))))))
