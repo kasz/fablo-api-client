@@ -7,3 +7,6 @@
 /checkouts
 /.lein-deps-sum
 target
+/tmp
+.DS_Store
+resources/version.txt
