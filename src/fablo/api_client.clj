@@ -78,7 +78,7 @@
   :required-args [config])
 (def-api-fn switch-db "admin/switch-db" :request-method :post, :signature-required true)
 (def-api-fn upload-db "admin/upload-db" :request-method :post, :signature-required true
-  :required-args [data-url] :optional-args [format autoswitch])
+  :required-args [data-url] :optional-args [format autoswitch force-decompression]) ; to use autoswitch use value 1 , to force-decompression use 'true'
 (def-api-fn feedback "recommendations/feedback/%s" :request-method :post :signature-required true
   :required-args [feedback-type user products] :optional-args [session-id] :url-template-args [feedback-type])
 (def-api-fn shopify-authorize-shop "admin/shopify/authorize-shop" :request-method :post, :signature-required true
